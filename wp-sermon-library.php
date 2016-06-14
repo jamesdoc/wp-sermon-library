@@ -14,14 +14,21 @@
     class SL_Sermon_Library {
 
       public function __construct() {
+        global $sl_name;
         global $sl_version;
         global $wpdb;
 
         $sl_version = '0.0.1';
+        $sl_name = array(
+          'name_data' => 'wp-sermon-library',
+          'name_human' => 'Wordpress Sermon Library');
 
         add_action( 'init', array(&$this, 'sl_register_cpt') );
         add_action( 'init', array(&$this, 'sl_register_taxonomies') );
+        add_action( 'admin_init', array(&$this, 'sl_register_custom_fields'));
+        add_action( 'save_post', array(&$this, 'sl_save_custom_fields') );
 
+        add_action( 'admin_enqueue_scripts', array(&$this, 'sl_add_admin_scripts'), 10, 1 );
       }
 
       public function activate() {
@@ -52,7 +59,7 @@
           'labels' => $labels,
           'hierarchical' => true,
           'description' => 'Sermons filterable by series',
-          'supports' => array( 'title', 'editor', 'author', 'thumbnail', 'trackbacks', 'custom-fields', 'comments', 'revisions', 'page-attributes' ),
+          'supports' => array( 'title', 'editor', 'author' , 'comments', 'revisions'),
           'taxonomies' => array( 'sermon_series' ),
           'public' => true,
           'show_ui' => true,
@@ -70,6 +77,7 @@
         );
 
         register_post_type( 'sermon', $args );
+        flush_rewrite_rules();
       }
 
       public function sl_register_taxonomies() {
@@ -103,8 +111,46 @@
 
         register_taxonomy('sermon_series', 'sermon', $args);
       }
-    }
 
+      public function sl_register_custom_fields() {
+        add_meta_box("sl_audio_upload_form", "Upload audio", array(&$this, 'sl_upload_audio_form'), "sermon", "normal", "high");
+      }
+
+      public function sl_save_custom_fields() {
+        if (!$_POST["sl_sermon_audio"]){ return; }
+        global $post;
+        update_post_meta($post->ID, "sermon_audio_media_id", $_POST["sl_sermon_audio"]);
+      }
+
+      public function sl_upload_audio_form(){
+        // TODO - spin this out into a template
+        global $post;
+        $custom = get_post_custom($post->ID);
+        if (isset($custom["sermon_audio_media_id"])){
+          $media_id = $custom["sermon_audio_media_id"][0];
+          $meta = wp_get_attachment_metadata($media_id);
+          $url = wp_get_attachment_url($media_id);
+          echo "<strong>Current audio:</strong> ";
+          echo $meta['title'] . ' (' .$meta['length_formatted'] . ')';
+          echo "<br />";
+        }
+        ?>
+        <label>Sermon audio file:</label>
+        <input id="js-sl_sermon_audio" type="text" size="36" name="sl_sermon_audio" value="" />
+        <input class="js-sl_sermon_audio__button" type="button" value="Set audio file" />
+        <?php
+      }
+
+      public function sl_add_admin_scripts( $hook ) {
+        global $post;
+        if ( $hook == 'post-new.php' || $hook == 'post.php' ) {
+          if ( 'sermon' === $post->post_type ) {
+            wp_enqueue_script( 'sl_admin_script', plugins_url('js/wp-sermon-library-admin.js', __FILE__) );
+          }
+        }
+      }
+
+    } // End SL_Sermon_Library
   }
 
   if(class_exists('SL_Sermon_Library')) {
