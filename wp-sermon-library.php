@@ -85,7 +85,7 @@
         // TODO: Add in ability to upload a sermon series image
 
         $labels = array(
-          'name' => _x( 'Sermon series', 'sermons' ),
+          'name' => _x( 'Sermon Series', 'sermons' ),
           'singular_name' => _x( 'Sermon series', 'sermons' ),
           'all_items' => _x( 'All sermon series\'', 'sermons' ),
           'edit_item' => _x( 'Edit sermon series', 'sermons' ),
@@ -113,11 +113,15 @@
       }
 
       public function sl_register_custom_fields() {
-        add_meta_box("sl_audio_upload_form", "Upload audio", array(&$this, 'sl_upload_audio_form'), "sermon", "normal", "high");
+        add_meta_box("sl_audio_upload_form", "Upload Audio", array(&$this, 'sl_upload_audio_form'), "sermon", "normal", "high");
       }
 
       public function sl_save_custom_fields( $post ) {
-        if (!$_POST["sl_sermon_audio"]){ return; }
+        // TODO: Server side compress audio if setting checked
+        // TODO: Generate ogg/mp3
+        if (!isset($_POST["sl_sermon_audio"])) {
+          return;
+        }
         update_post_meta($post->ID, "sermon_audio_media_id", $_POST["sl_sermon_audio"]);
       }
 
@@ -127,6 +131,9 @@
           $media_id = $custom_fields["sermon_audio_media_id"][0];
           $audio = wp_get_attachment_metadata($media_id);
           $audio['url'] = wp_get_attachment_url($media_id);
+        } else {
+          $audio['title'] = 'No audio uploaded';
+          $audio['length_formatted'] = '#.##';
         }
         include_once('templates/tpl_upload_form.php');
       }
