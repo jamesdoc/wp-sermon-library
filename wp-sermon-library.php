@@ -116,29 +116,19 @@
         add_meta_box("sl_audio_upload_form", "Upload audio", array(&$this, 'sl_upload_audio_form'), "sermon", "normal", "high");
       }
 
-      public function sl_save_custom_fields() {
+      public function sl_save_custom_fields( $post ) {
         if (!$_POST["sl_sermon_audio"]){ return; }
-        global $post;
         update_post_meta($post->ID, "sermon_audio_media_id", $_POST["sl_sermon_audio"]);
       }
 
-      public function sl_upload_audio_form(){
-        // TODO - spin this out into a template
-        global $post;
-        $custom = get_post_custom($post->ID);
-        if (isset($custom["sermon_audio_media_id"])){
-          $media_id = $custom["sermon_audio_media_id"][0];
-          $meta = wp_get_attachment_metadata($media_id);
-          $url = wp_get_attachment_url($media_id);
-          echo "<strong>Current audio:</strong> ";
-          echo $meta['title'] . ' (' .$meta['length_formatted'] . ')';
-          echo "<br />";
+      public function sl_upload_audio_form( $post ) {
+        $custom_fields = get_post_custom($post->ID);
+        if (isset($custom_fields["sermon_audio_media_id"])){
+          $media_id = $custom_fields["sermon_audio_media_id"][0];
+          $audio = wp_get_attachment_metadata($media_id);
+          $audio['url'] = wp_get_attachment_url($media_id);
         }
-        ?>
-        <label>Sermon audio file:</label>
-        <input id="js-sl_sermon_audio" type="text" size="36" name="sl_sermon_audio" value="" />
-        <input class="js-sl_sermon_audio__button" type="button" value="Set audio file" />
-        <?php
+        include_once('templates/tpl_upload_form.php');
       }
 
       public function sl_add_admin_scripts( $hook ) {
