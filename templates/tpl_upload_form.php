@@ -28,6 +28,6 @@
     </audio>
   <?php endif; // end if audio already... ?>
 
-  <small>TODO: Add in 'how to compress' tip</small>
+  <p><small>TODO: Add in 'how to compress' tip</small></p>
 
 </div>

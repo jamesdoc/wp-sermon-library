@@ -36,9 +36,17 @@ jQuery(document).ready( function( $ ) {
       $('<div class="error js-sl_error"><p>Please select an audio file</p></div>')
         .prependTo(el_upload_form);
     } else {
-      // TODO: Give better feedback that the audio file has been included
       var audio_id_field = document.getElementById("js-sl_sermon_audio");
       audio_id_field.value = audio_data.id;
+
+      $('.js-sl_audio_preview__title').text(audio_data.title);
+      $('.js-sl_audio_preview__length').text(audio_data.fileLength);
+      var sl_audio_player = $('.js-sl_audio_preview');
+      sl_audio_player.attr("controls", "controls");
+      sl_audio_player.children("source")
+        .attr("src", audio_data.url)
+        .attr("type", audio_data.mime);
+      sl_audio_player[0].load();
     }
   }
 

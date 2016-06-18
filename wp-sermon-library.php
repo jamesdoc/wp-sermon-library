@@ -133,7 +133,7 @@
           $audio['url'] = wp_get_attachment_url($media_id);
         } else {
           $audio['title'] = 'No audio uploaded';
-          $audio['length_formatted'] = '#.##';
+          $audio['length_formatted'] = '#:##';
         }
         include_once('templates/tpl_upload_form.php');
       }
