@@ -29,6 +29,12 @@
         add_action( 'save_post', array(&$this, 'sl_save_custom_fields') );
 
         add_action( 'admin_enqueue_scripts', array(&$this, 'sl_add_admin_scripts'), 10, 1 );
+
+        // Add custom fields to sermon series taxonomy
+        add_action( 'sermon_series_add_form_fields', array(&$this, 'sl_add_feature_group_field'), 10, 2 );
+        add_action( 'created_sermon_series', array(&$this, 'sl_save_sermon_series_meta'), 10, 2 );
+        add_action( 'sermon_series_edit_form_fields', array(&$this, 'sl_edit_feature_group_field'), 10, 2 );
+        add_action( 'edited_sermon_series', array(&$this, 'sl_update_sermon_series_meta'), 10, 2 );
       }
 
       public function activate() {
@@ -81,8 +87,6 @@
       }
 
       public function sl_register_taxonomies() {
-
-        // TODO: Add in ability to upload a sermon series image
 
         $labels = array(
           'name' => _x( 'Sermon Series', 'sermons' ),
@@ -140,10 +144,52 @@
 
       public function sl_add_admin_scripts( $hook ) {
         global $post;
-        if ( $hook == 'post-new.php' || $hook == 'post.php' ) {
-          if ( 'sermon' === $post->post_type ) {
+        if ( $hook == 'post-new.php' || $hook == 'post.php' || $hook == 'edit-tags.php') {
+          if ( $hook == 'edit-tags.php' || $post->post_type === 'sermon' ) {
             wp_enqueue_script( 'sl_admin_script', plugins_url('js/wp-sermon-library-admin.js', __FILE__) );
           }
+        }
+      }
+
+      public function sl_add_feature_group_field($taxonomy) {
+        // TODO: Make this accept an image upload via the media uploader
+        // TODO: Push this out into the template folder
+        ?>
+        <div class="form-field term-group">
+          <label for="sl_sermon_taxonomy_image"><?php _e('Sermon image', 'sermons'); ?></label>
+          <input id="js-sl_sermon_audio" type="text" name="sl_sermon_taxonomy_image" value="" />
+          <?/*<button class="js-sl_sermon_audio__button button" data-uploader_title="Upload Sermon" data-uploader_button_text="Add Sermon">
+            Select series image
+          </button>*/?>
+        </div><?php
+      }
+
+      public function sl_edit_feature_group_field( $term, $taxonomy ){
+        // get current group
+        $feature_image = get_term_meta( $term->term_id, 'sl_sermon_taxonomy_image', true );
+
+        ?><tr class="form-field term-group-wrap">
+          <th scope="row"><label><?php _e( 'Sermon image', 'sermons' ); ?></label></th>
+          <td>
+            <input id="js-sl_sermon_audio" type="text" name="sl_sermon_taxonomy_image" value="<?php echo $feature_image ?>" />
+            <?/*<button class="js-sl_sermon_audio__button button" data-uploader_title="Upload Sermon" data-uploader_button_text="Add Sermon">
+            Replace series image
+            </button>*/?>
+          </td>
+        </tr><?php
+      }
+
+      public function sl_save_sermon_series_meta( $term_id, $tt_id ){
+        if( isset( $_POST['sl_sermon_taxonomy_image'] ) ){
+          $group = sanitize_title( $_POST['sl_sermon_taxonomy_image'] );
+          add_term_meta( $term_id, 'sl_sermon_taxonomy_image', $group, true );
+        }
+      }
+
+      public function sl_update_sermon_series_meta( $term_id, $tt_id ){
+        if( isset( $_POST['sl_sermon_taxonomy_image'] ) ){
+          $group = sanitize_title( $_POST['sl_sermon_taxonomy_image'] );
+          update_term_meta( $term_id, 'sl_sermon_taxonomy_image', $group );
         }
       }
 
