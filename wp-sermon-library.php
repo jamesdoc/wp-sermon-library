@@ -31,10 +31,14 @@
         add_action( 'admin_enqueue_scripts', array(&$this, 'sl_add_admin_scripts'), 10, 1 );
 
         // Add custom fields to sermon series taxonomy
+        // TODO: check if Wordpress at least 4.4 before loading this in
         add_action( 'sermon_series_add_form_fields', array(&$this, 'sl_add_feature_group_field'), 10, 2 );
         add_action( 'created_sermon_series', array(&$this, 'sl_save_sermon_series_meta'), 10, 2 );
         add_action( 'sermon_series_edit_form_fields', array(&$this, 'sl_edit_feature_group_field'), 10, 2 );
         add_action( 'edited_sermon_series', array(&$this, 'sl_update_sermon_series_meta'), 10, 2 );
+        add_filter( 'manage_edit-sermon_series_columns', array(&$this, 'sl_add_sermon_series_column') );
+        add_filter( 'manage_sermon_series_custom_column', array(&$this, 'add_sermon_series_column_content'), 10, 3 );
+
       }
 
       public function activate() {
@@ -144,39 +148,78 @@
 
       public function sl_add_admin_scripts( $hook ) {
         global $post;
-        if ( $hook == 'post-new.php' || $hook == 'post.php' || $hook == 'edit-tags.php') {
-          if ( $hook == 'edit-tags.php' || $post->post_type === 'sermon' ) {
-            wp_enqueue_script( 'sl_admin_script', plugins_url('js/wp-sermon-library-admin.js', __FILE__) );
+        $screen = get_current_screen();
+
+        if ( $screen->post_type === 'sermon' ) {
+          wp_enqueue_script( 'sl_admin_script', plugins_url('js/wp-sermon-library-admin.js', __FILE__) );
+
+          if ($screen->taxonomy === 'sermon_series') {
+            wp_enqueue_media();
+            wp_enqueue_style( 'thickbox' );
           }
         }
+
       }
 
       public function sl_add_feature_group_field($taxonomy) {
-        // TODO: Make this accept an image upload via the media uploader
-        // TODO: Push this out into the template folder
+        // TODO: Push this out into the template folder (and tidy UI)
         ?>
         <div class="form-field term-group">
-          <label for="sl_sermon_taxonomy_image"><?php _e('Sermon image', 'sermons'); ?></label>
-          <input id="js-sl_sermon_audio" type="text" name="sl_sermon_taxonomy_image" value="" />
-          <?/*<button class="js-sl_sermon_audio__button button" data-uploader_title="Upload Sermon" data-uploader_button_text="Add Sermon">
-            Select series image
-          </button>*/?>
+          <label for="sl_sermon_taxonomy_image" class="js-sl_taxonomy_image_label"><?php _e('Sermon image', 'sermons'); ?></label>
+          <input id="js-sl_sermon_taxonomy_image" type="hidden" name="sl_sermon_taxonomy_image" value="" />
+          <p>
+            <button class="js-sl_sermon_series_image_button button" data-uploader_title="Upload Image" data-uploader_button_text="Add Sermon Series Image">
+              Select sermon series image
+            </button>
+          </p>
+          <div>
+            <img class="js-sl_sermon_series_image_preview" src="http://placehold.it/200x200" alt="" width="100" />
+          </div>
         </div><?php
       }
 
       public function sl_edit_feature_group_field( $term, $taxonomy ){
-        // get current group
-        $feature_image = get_term_meta( $term->term_id, 'sl_sermon_taxonomy_image', true );
-
-        ?><tr class="form-field term-group-wrap">
+        $series_image_url = "http://placehold.it/200x200";
+        $series_image_id = get_term_meta( $term->term_id, 'sl_sermon_taxonomy_image', true );
+        if($series_image_id) {
+          $series_image_url = wp_get_attachment_url($series_image_id);
+        }
+        ?>
+        <tr class="form-field term-group-wrap">
           <th scope="row"><label><?php _e( 'Sermon image', 'sermons' ); ?></label></th>
           <td>
-            <input id="js-sl_sermon_audio" type="text" name="sl_sermon_taxonomy_image" value="<?php echo $feature_image ?>" />
-            <?/*<button class="js-sl_sermon_audio__button button" data-uploader_title="Upload Sermon" data-uploader_button_text="Add Sermon">
-            Replace series image
-            </button>*/?>
+            <input id="js-sl_sermon_taxonomy_image" type="hidden" name="sl_sermon_taxonomy_image" value="<?php echo $series_image_id ?>" />
+            <div>
+              <img class="js-sl_sermon_series_image_preview" src="<?php echo $series_image_url ?>" alt="" width="200" />
+            </div>
+            <p>
+              <button class="js-sl_sermon_series_image_button button" data-uploader_title="Upload Image" data-uploader_button_text="Add Sermon Series Image">
+                Replace sermon series image
+              </button>
+            </p>
           </td>
-        </tr><?php
+        </tr>
+        <?php
+      }
+
+      public function sl_add_sermon_series_column( $columns ){
+        $columns['sermon_image'] = __( 'Image', 'sermon' );
+        return $columns;
+      }
+
+      public function add_sermon_series_column_content( $content, $column_name, $term_id ){
+        if( $column_name !== 'sermon_image' ) { return $content; }
+
+        $series_image_url = "http://placehold.it/200x200";
+
+        $term_id = absint( $term_id );
+        $series_image_id = get_term_meta( $term_id, 'sl_sermon_taxonomy_image', true );
+
+        if($series_image_id) {
+          $series_image_url = wp_get_attachment_image_url($series_image_id, 'thumbnail', false);
+        }
+
+        return "<img src='" . $series_image_url . "' alt='' width='100%' />";
       }
 
       public function sl_save_sermon_series_meta( $term_id, $tt_id ){
